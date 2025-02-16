@@ -4,7 +4,6 @@
     <title>Sticker Maker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Keep your existing styles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             max-width: 600px;
@@ -31,9 +30,8 @@
     <button class="button" onclick="handleSticker()">Create Sticker</button>
 
     <script>
-        // ====== IMPORTANT: REPLACE THIS WITH YOUR RENDER URL ======
         const BACKEND_URL = "https://teleibot-backend.onrender.com";
-        
+
         async function handleGenerate() {
             const prompt = prompt("Enter your image description:");
             if (!prompt) return;
@@ -44,16 +42,19 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt })
                 });
-                
+
                 if (response.ok) {
-                    const blob = await response.blob();
+                    const imageURL = URL.createObjectURL(await response.blob());
                     Telegram.WebApp.sendData(JSON.stringify({
                         type: "image",
-                        url: URL.createObjectURL(blob)
+                        url: imageURL  // Directly pass image URL
                     }));
+                    Telegram.WebApp.openLink(imageURL);
+                } else {
+                    alert("Failed to generate image");
                 }
             } catch (error) {
-                alert("Failed to generate image");
+                alert("Error: " + error.message);
             }
         }
 
@@ -61,7 +62,7 @@
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = 'image/*';
-            
+
             fileInput.onchange = async (e) => {
                 const file = e.target.files[0];
                 const formData = new FormData();
@@ -74,17 +75,20 @@
                     });
 
                     if (response.ok) {
-                        const blob = await response.blob();
+                        const imageURL = URL.createObjectURL(await response.blob());
                         Telegram.WebApp.sendData(JSON.stringify({
                             type: "sticker",
-                            url: URL.createObjectURL(blob)
+                            url: imageURL
                         }));
+                        Telegram.WebApp.openLink(imageURL);
+                    } else {
+                        alert("Failed to create sticker");
                     }
                 } catch (error) {
-                    alert("Failed to create sticker");
+                    alert("Error: " + error.message);
                 }
             };
-            
+
             fileInput.click();
         }
 
