@@ -22,19 +22,44 @@
             font-size: 16px;
             width: 80%;
         }
+        #promptModal {
+            display: none;
+            position: fixed;
+            top: 20%;
+            left: 10%;
+            right: 10%;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <h1>✨ Sticker Maker</h1>
     <button class="button" onclick="handleGenerate()">Generate Image</button>
     <button class="button" onclick="handleSticker()">Create Sticker</button>
+    <button class="button" onclick="handleInpainting()">Edit Picture (Inpaint)</button>
+
+    <!-- Prompt Modal -->
+    <div id="promptModal">
+        <input type="text" id="promptInput" placeholder="Describe your image..." style="width: 80%; padding: 10px; margin: 10px;">
+        <button onclick="submitPrompt()">Generate</button>
+        <button onclick="closeModal()">Cancel</button>
+    </div>
 
     <script>
         const BACKEND_URL = "https://teleibot-backend.onrender.com";
 
-        async function handleGenerate() {
-            const prompt = prompt("Enter your image description:");
-            if (!prompt) return;
+        // Handle Generate Image
+        function handleGenerate() {
+            document.getElementById('promptModal').style.display = 'block';
+        }
+
+        async function submitPrompt() {
+            const prompt = document.getElementById('promptInput').value;
+            closeModal();
 
             try {
                 const response = await fetch(`${BACKEND_URL}/generate`, {
@@ -44,12 +69,20 @@
                 });
 
                 if (response.ok) {
-                    const imageURL = URL.createObjectURL(await response.blob());
+                    const imageBlob = await response.blob();
+                    const imageURL = URL.createObjectURL(imageBlob);
+
+                    // Display the image in the Mini App
+                    const imgElement = document.createElement('img');
+                    imgElement.src = imageURL;
+                    imgElement.style.maxWidth = '100%';
+                    document.body.appendChild(imgElement);
+
+                    // Send the image URL back to the bot
                     Telegram.WebApp.sendData(JSON.stringify({
                         type: "image",
-                        url: imageURL  // Directly pass image URL
+                        url: imageURL
                     }));
-                    Telegram.WebApp.openLink(imageURL);
                 } else {
                     alert("Failed to generate image");
                 }
@@ -58,6 +91,7 @@
             }
         }
 
+        // Handle Create Sticker
         async function handleSticker() {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -75,12 +109,20 @@
                     });
 
                     if (response.ok) {
-                        const imageURL = URL.createObjectURL(await response.blob());
+                        const imageBlob = await response.blob();
+                        const imageURL = URL.createObjectURL(imageBlob);
+
+                        // Display the sticker in the Mini App
+                        const imgElement = document.createElement('img');
+                        imgElement.src = imageURL;
+                        imgElement.style.maxWidth = '100%';
+                        document.body.appendChild(imgElement);
+
+                        // Send the sticker URL back to the bot
                         Telegram.WebApp.sendData(JSON.stringify({
                             type: "sticker",
                             url: imageURL
                         }));
-                        Telegram.WebApp.openLink(imageURL);
                     } else {
                         alert("Failed to create sticker");
                     }
@@ -90,6 +132,57 @@
             };
 
             fileInput.click();
+        }
+
+        // Handle Inpainting
+        async function handleInpainting() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                const prompt = prompt("What do you want to edit?");
+
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append('prompt', prompt);
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/inpaint`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const imageBlob = await response.blob();
+                        const imageURL = URL.createObjectURL(imageBlob);
+
+                        // Display the edited image in the Mini App
+                        const imgElement = document.createElement('img');
+                        imgElement.src = imageURL;
+                        imgElement.style.maxWidth = '100%';
+                        document.body.appendChild(imgElement);
+
+                        // Send the edited image URL back to the bot
+                        Telegram.WebApp.sendData(JSON.stringify({
+                            type: "image",
+                            url: imageURL
+                        }));
+                    } else {
+                        alert("Failed to edit image");
+                    }
+                } catch (error) {
+                    alert("Error: " + error.message);
+                }
+            };
+
+            fileInput.click();
+        }
+
+        // Close Modal
+        function closeModal() {
+            document.getElementById('promptModal').style.display = 'none';
         }
 
         Telegram.WebApp.ready();
