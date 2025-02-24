@@ -4,26 +4,56 @@
     <title>Sticker Maker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ... (keep your existing styles) ... */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 80%;
+        }
+        #promptModal {
+            display: none;
+            position: fixed;
+            top: 20%;
+            left: 10%;
+            right: 10%;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <h1>✨ Sticker Maker</h1>
     <button class="button" onclick="handleGenerate()">Generate Image</button>
     <button class="button" onclick="handleSticker()">Create Sticker</button>
+    <button class="button" onclick="handleInpainting()">Edit Picture (Inpaint)</button>
 
     <!-- Prompt Modal -->
     <div id="promptModal">
         <input type="text" id="promptInput" placeholder="Describe your image..." style="width: 80%; padding: 10px; margin: 10px;">
-        <button onclick="submitPrompt()">Generate</button>
-        <button onclick="closeModal()">Cancel</button>
+        <button class="button" style="width: auto; background: #28a745;" onclick="submitPrompt()">Generate</button>
+        <button class="button" style="width: auto; background: #dc3545;" onclick="closeModal()">Cancel</button>
     </div>
 
     <script>
         const BACKEND_URL = "https://your-render-backend-url.onrender.com";
-        const user_id = Telegram.WebApp.initDataUnsafe.user.id;  // Get Telegram User ID
+        const user_id = Telegram.WebApp.initDataUnsafe.user.id;
 
-        // Generate Image
+        // Generate Image Flow
         function handleGenerate() {
             document.getElementById('promptModal').style.display = 'block';
         }
@@ -36,24 +66,17 @@
                 const response = await fetch(`${BACKEND_URL}/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        chat_id: user_id  // Pass user ID to backend
-                    })
+                    body: JSON.stringify({ prompt, chat_id: user_id })
                 });
 
                 const result = await response.json();
-                if (response.ok) {
-                    alert("Image sent to your Telegram chat! 🚀");
-                } else {
-                    alert("Error: " + result.error);
-                }
+                alert(result.status || result.error);
             } catch (error) {
                 alert("Error: " + error.message);
             }
         }
 
-        // Create Sticker
+        // Create Sticker Flow
         async function handleSticker() {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -63,20 +86,16 @@
                 const file = e.target.files[0];
                 const formData = new FormData();
                 formData.append('image', file);
-                formData.append('chat_id', user_id);  // Pass user ID to backend
+                formData.append('chat_id', user_id);
 
                 try {
                     const response = await fetch(`${BACKEND_URL}/sticker`, {
                         method: 'POST',
                         body: formData
                     });
-
+                    
                     const result = await response.json();
-                    if (response.ok) {
-                        alert("Sticker sent to your Telegram chat! 🎉");
-                    } else {
-                        alert("Error: " + result.error);
-                    }
+                    alert(result.status || result.error);
                 } catch (error) {
                     alert("Error: " + error.message);
                 }
@@ -85,7 +104,43 @@
             fileInput.click();
         }
 
-        // Close Modal
+        // Inpainting Flow (Kept original UI but needs backend implementation)
+        async function handleInpainting() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                const prompt = prompt("What do you want to edit?");
+
+                if (!prompt) {
+                    alert("Please describe your edit!");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append('prompt', prompt);
+                formData.append('chat_id', user_id);
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/inpaint`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    alert(result.status || result.error);
+                } catch (error) {
+                    alert("Error: " + error.message);
+                }
+            };
+
+            fileInput.click();
+        }
+
+        // Shared Functions
         function closeModal() {
             document.getElementById('promptModal').style.display = 'none';
         }
