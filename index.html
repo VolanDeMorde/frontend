@@ -4,43 +4,13 @@
     <title>Sticker Maker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-        }
-        .button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            margin: 10px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 80%;
-        }
-        #promptModal {
-            display: none;
-            position: fixed;
-            top: 20%;
-            left: 10%;
-            right: 10%;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
+        /* ... (keep your existing styles) ... */
     </style>
 </head>
 <body>
     <h1>✨ Sticker Maker</h1>
     <button class="button" onclick="handleGenerate()">Generate Image</button>
     <button class="button" onclick="handleSticker()">Create Sticker</button>
-    <button class="button" onclick="handleInpainting()">Edit Picture (Inpaint)</button>
 
     <!-- Prompt Modal -->
     <div id="promptModal">
@@ -50,9 +20,10 @@
     </div>
 
     <script>
-        const BACKEND_URL = "https://teleibot-backend.onrender.com";
+        const BACKEND_URL = "https://your-render-backend-url.onrender.com";
+        const user_id = Telegram.WebApp.initDataUnsafe.user.id;  // Get Telegram User ID
 
-        // Handle Generate Image
+        // Generate Image
         function handleGenerate() {
             document.getElementById('promptModal').style.display = 'block';
         }
@@ -65,33 +36,24 @@
                 const response = await fetch(`${BACKEND_URL}/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt })
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        chat_id: user_id  // Pass user ID to backend
+                    })
                 });
 
+                const result = await response.json();
                 if (response.ok) {
-                    const imageBlob = await response.blob();
-                    const imageURL = URL.createObjectURL(imageBlob);
-
-                    // Display the image in the Mini App
-                    const imgElement = document.createElement('img');
-                    imgElement.src = imageURL;
-                    imgElement.style.maxWidth = '100%';
-                    document.body.appendChild(imgElement);
-
-                    // Send the image URL back to the bot
-                    Telegram.WebApp.sendData(JSON.stringify({
-                        type: "image",
-                        url: imageURL
-                    }));
+                    alert("Image sent to your Telegram chat! 🚀");
                 } else {
-                    alert("Failed to generate image");
+                    alert("Error: " + result.error);
                 }
             } catch (error) {
                 alert("Error: " + error.message);
             }
         }
 
-        // Handle Create Sticker
+        // Create Sticker
         async function handleSticker() {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -101,6 +63,7 @@
                 const file = e.target.files[0];
                 const formData = new FormData();
                 formData.append('image', file);
+                formData.append('chat_id', user_id);  // Pass user ID to backend
 
                 try {
                     const response = await fetch(`${BACKEND_URL}/sticker`, {
@@ -108,69 +71,11 @@
                         body: formData
                     });
 
+                    const result = await response.json();
                     if (response.ok) {
-                        const imageBlob = await response.blob();
-                        const imageURL = URL.createObjectURL(imageBlob);
-
-                        // Display the sticker in the Mini App
-                        const imgElement = document.createElement('img');
-                        imgElement.src = imageURL;
-                        imgElement.style.maxWidth = '100%';
-                        document.body.appendChild(imgElement);
-
-                        // Send the sticker URL back to the bot
-                        Telegram.WebApp.sendData(JSON.stringify({
-                            type: "sticker",
-                            url: imageURL
-                        }));
+                        alert("Sticker sent to your Telegram chat! 🎉");
                     } else {
-                        alert("Failed to create sticker");
-                    }
-                } catch (error) {
-                    alert("Error: " + error.message);
-                }
-            };
-
-            fileInput.click();
-        }
-
-        // Handle Inpainting
-        async function handleInpainting() {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-
-            fileInput.onchange = async (e) => {
-                const file = e.target.files[0];
-                const prompt = prompt("What do you want to edit?");
-
-                const formData = new FormData();
-                formData.append('image', file);
-                formData.append('prompt', prompt);
-
-                try {
-                    const response = await fetch(`${BACKEND_URL}/inpaint`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (response.ok) {
-                        const imageBlob = await response.blob();
-                        const imageURL = URL.createObjectURL(imageBlob);
-
-                        // Display the edited image in the Mini App
-                        const imgElement = document.createElement('img');
-                        imgElement.src = imageURL;
-                        imgElement.style.maxWidth = '100%';
-                        document.body.appendChild(imgElement);
-
-                        // Send the edited image URL back to the bot
-                        Telegram.WebApp.sendData(JSON.stringify({
-                            type: "image",
-                            url: imageURL
-                        }));
-                    } else {
-                        alert("Failed to edit image");
+                        alert("Error: " + result.error);
                     }
                 } catch (error) {
                     alert("Error: " + error.message);
